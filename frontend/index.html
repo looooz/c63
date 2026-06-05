@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全能单位换算工具</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --bg-input: #0f172a;
+            --border: #334155;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent: #22d3ee;
+            --accent2: #f472b6;
+            --success: #34d399;
+            --warning: #fbbf24;
+            --gradient1: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --gradient2: linear-gradient(135deg, #06b6d4, #3b82f6);
+            --gradient3: linear-gradient(135deg, #f472b6, #fb923c);
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 20%, rgba(99,102,241,0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(34,211,238,0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(244,114,182,0.04) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+        #app { position: relative; z-index: 1; }
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+        }
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #818cf8, #22d3ee, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .category-bar {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0 16px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .category-bar::-webkit-scrollbar { display: none; }
+        .cat-btn {
+            flex-shrink: 0;
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+            white-space: nowrap;
+        }
+        .cat-btn:hover {
+            border-color: var(--primary-light);
+            color: var(--text);
+            transform: translateY(-1px);
+        }
+        .cat-btn.active {
+            background: var(--gradient1);
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 24px;
+            margin-top: 8px;
+        }
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s;
+        }
+        .card:hover {
+            border-color: rgba(99,102,241,0.3);
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+        .input-section {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .input-group {
+            flex: 1;
+            min-width: 160px;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            outline: none;
+        }
+        .input-group input:focus, .input-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+        }
+        .input-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        .input-group select option {
+            background: var(--bg-card);
+            color: var(--text);
+        }
+        .value-input {
+            font-size: 1.4rem !important;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+        .precision-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .precision-bar span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .prec-btn {
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .prec-btn:hover { border-color: var(--primary-light); color: var(--text); }
+        .prec-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .swap-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--primary-light);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+            align-self: flex-end;
+            margin-bottom: 4px;
+        }
+        .swap-btn:hover {
+            background: var(--primary);
+            color: white;
+            transform: rotate(180deg);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .result-item {
+            padding: 14px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .result-item:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-1px);
+        }
+        .result-item.source {
+            border-color: var(--primary);
+            background: rgba(99,102,241,0.08);
+        }
+        .result-unit {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .result-value {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+        }
+        .copy-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--primary);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+        }
+        .result-item:hover .copy-hint { opacity: 1; }
+        .result-item:hover .result-unit,
+        .result-item:hover .result-value { opacity: 0.2; }
+        .sidebar { display: flex; flex-direction: column; gap: 20px; }
+        .exchange-card .rate-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .rate-item {
+            padding: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            text-align: center;
+        }
+        .rate-code {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .rate-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin-top: 4px;
+        }
+        .exchange-convert {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        .exchange-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: flex-end;
+        }
+        .exchange-row .input-group { flex: 1; }
+        .exchange-result {
+            padding: 14px;
+            background: rgba(34,211,238,0.06);
+            border: 1px solid rgba(34,211,238,0.2);
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .exchange-result .val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .exchange-result .label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .presets-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .preset-item {
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .preset-item:hover {
+            border-color: var(--accent2);
+            background: rgba(244,114,182,0.06);
+            transform: translateX(4px);
+        }
+        .preset-name {
+            font-size: 0.85rem;
+            color: var(--text);
+            font-weight: 500;
+        }
+        .preset-arrow {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-track { background: transparent; }
+        .history-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .history-item {
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            border-color: var(--primary-light);
+            transform: translateX(4px);
+        }
+        .history-main {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+        .history-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .empty-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            opacity: 0.5;
+        }
+        .clear-btn {
+            margin-top: 12px;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .clear-btn:hover {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: var(--success);
+            color: #064e3b;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 1000;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 4px 15px rgba(52,211,153,0.3);
+        }
+        .toast.show { transform: translateX(0); }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s, transform 0.3s; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(10px); }
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+            margin: 12px 0;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="header">
+        <h1>⚡ 全能单位换算工具</h1>
+        <p>支持 8 大类别 · 60+ 种单位 · 实时换算</p>
+    </div>
+
+    <div class="container">
+        <div class="category-bar">
+            <button
+                v-for="cat in categories"
+                :key="cat.key"
+                class="cat-btn"
+                :class="{ active: selectedCategory === cat.key }"
+                @click="selectCategory(cat.key)"
+            >{{ cat.name }}</button>
+        </div>
+
+        <div class="main-grid">
+            <div class="left-col">
+                <div class="card">
+                    <div class="card-title">
+                        <span class="icon" :style="{ background: 'var(--gradient1)' }">🔄</span>
+                        {{ currentCategoryName }}换算
+                    </div>
+
+                    <div class="input-section">
+                        <div class="input-group" style="flex:2">
+                            <label>输入数值</label>
+                            <input
+                                type="number"
+                                class="value-input"
+                                v-model.number="inputValue"
+                                @input="doConvert"
+                                placeholder="请输入数值"
+                            >
+                        </div>
+                        <div class="input-group" style="flex:1.5">
+                            <label>源单位</label>
+                            <select v-model="fromUnit" @change="doConvert">
+                                <option v-for="u in currentUnits" :key="u" :value="u">{{ u }}</option>
+                            </select>
+                        </div>
+                        <button class="swap-btn" @click="swapUnits" title="交换单位">⇄</button>
+                        <div class="input-group" style="flex:1.5">
+                            <label>目标单位</label>
+                            <select v-model="toUnit" @change="doConvert">
+                                <option v-for="u in currentUnits" :key="u" :value="u">{{ u }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="precision-bar">
+                        <span>小数精度：</span>
+                        <button
+                            v-for="p in [2, 4, 6]"
+                            :key="p"
+                            class="prec-btn"
+                            :class="{ active: precision === p }"
+                            @click="precision = p; doConvert()"
+                        >{{ p }} 位</button>
+                    </div>
+
+                    <div v-if="targetResult !== null" class="result-item source" style="margin-bottom:20px;padding:20px">
+                        <div>
+                            <div class="result-unit">{{ inputValue }} {{ fromUnit }}</div>
+                            <div style="font-size:1.6rem;font-weight:700;margin-top:6px;color:var(--accent)">
+                                = {{ targetResult }} {{ toUnit }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="font-size:0.85rem;color:var(--text-muted);font-weight:500;margin-bottom:8px">
+                        全部换算结果（点击复制）
+                    </div>
+                    <div class="results-grid" v-if="results">
+                        <div
+                            v-for="(val, unit) in results"
+                            :key="unit"
+                            class="result-item"
+                            :class="{ source: unit === fromUnit }"
+                            @click="copyResult(val, unit)"
+                        >
+                            <span class="result-unit">{{ unit }}</span>
+                            <span class="result-value">{{ val }}</span>
+                            <span class="copy-hint">复制</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="card exchange-card">
+                    <div class="card-title">
+                        <span class="icon" :style="{ background: 'var(--gradient2)' }">💱</span>
+                        汇率换算
+                    </div>
+                    <div class="rate-grid" v-if="exchangeRates">
+                        <div class="rate-item" v-for="(rate, code) in exchangeRates.rates" :key="code">
+                            <div class="rate-code">{{ code }}</div>
+                            <div class="rate-value">{{ rate }}</div>
+                        </div>
+                    </div>
+                    <div v-else style="text-align:center;padding:20px">
+                        <span class="loading-spinner"></span>
+                        <div style="margin-top:8px;font-size:0.8rem;color:var(--text-muted)">加载汇率中...</div>
+                    </div>
+                    <div class="exchange-convert" v-if="exchangeRates">
+                        <div class="exchange-row">
+                            <div class="input-group">
+                                <label>金额</label>
+                                <input type="number" v-model.number="exchangeAmount" placeholder="1" step="0.01">
+                            </div>
+                            <div class="input-group">
+                                <label>从</label>
+                                <select v-model="exchangeFrom">
+                                    <option v-for="(r, c) in exchangeRates.rates" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="exchange-row">
+                            <div class="input-group">
+                                <label>到</label>
+                                <select v-model="exchangeTo">
+                                    <option v-for="(r, c) in exchangeRates.rates" :key="c" :value="c">{{ c }}</option>
+                                </select>
+                            </div>
+                            <button class="swap-btn" style="margin-bottom:0" @click="[exchangeFrom, exchangeTo] = [exchangeTo, exchangeFrom]">⇄</button>
+                        </div>
+                        <div class="exchange-result" v-if="exchangeResult !== null">
+                            <div class="val">{{ exchangeResult }} {{ exchangeTo }}</div>
+                            <div class="label">{{ exchangeAmount }} {{ exchangeFrom }} = {{ exchangeResult }} {{ exchangeTo }}</div>
+                        </div>
+                        <button style="width:100%;padding:10px;margin-top:10px;border-radius:10px;border:1px solid var(--accent);background:rgba(34,211,238,0.08);color:var(--accent);font-weight:600;cursor:pointer;transition:all 0.2s;font-size:0.9rem"
+                            @click="convertCurrency" @mouseover="$event.target.style.background='rgba(34,211,238,0.15)'"
+                            @mouseout="$event.target.style.background='rgba(34,211,238,0.08)'"
+                        >换算</button>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-muted);margin-top:8px;text-align:center">
+                        基准：USD · {{ exchangeRates?.date || '-' }}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <span class="icon" :style="{ background: 'var(--gradient3)' }">📌</span>
+                        常用换算预设
+                    </div>
+                    <div class="presets-grid">
+                        <div
+                            v-for="(p, i) in presets"
+                            :key="i"
+                            class="preset-item"
+                            @click="applyPreset(p)"
+                        >
+                            <span class="preset-name">{{ p.name }}</span>
+                            <span class="preset-arrow">→</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <span class="icon" :style="{ background: 'linear-gradient(135deg, #a78bfa, #6366f1)' }">📋</span>
+                        换算历史
+                    </div>
+                    <div class="history-list" v-if="history.length">
+                        <div
+                            v-for="(h, i) in history"
+                            :key="i"
+                            class="history-item"
+                            @click="applyHistory(h)"
+                        >
+                            <div class="history-main">{{ h.value }} {{ h.from_unit }} → {{ getCategoryName(h.category) }}</div>
+                            <div class="history-time">{{ h.timestamp }}</div>
+                        </div>
+                    </div>
+                    <div v-else class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        暂无换算记录
+                    </div>
+                    <button v-if="history.length" class="clear-btn" @click="clearHistory">清除历史</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" :class="{ show: toastVisible }">{{ toastMsg }}</div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch, onMounted } = Vue;
+
+createApp({
+    setup() {
+        const categories = ref([]);
+        const selectedCategory = ref('length');
+        const inputValue = ref(1);
+        const fromUnit = ref('');
+        const toUnit = ref('');
+        const precision = ref(6);
+        const results = ref(null);
+        const targetResult = ref(null);
+        const history = ref([]);
+        const presets = ref([]);
+        const exchangeRates = ref(null);
+        const exchangeFrom = ref('USD');
+        const exchangeTo = ref('CNY');
+        const exchangeAmount = ref(1);
+        const exchangeResult = ref(null);
+        const toastVisible = ref(false);
+        const toastMsg = ref('');
+
+        const currentUnits = computed(() => {
+            const cat = categories.value.find(c => c.key === selectedCategory.value);
+            return cat ? cat.units : [];
+        });
+
+        const currentCategoryName = computed(() => {
+            const cat = categories.value.find(c => c.key === selectedCategory.value);
+            return cat ? cat.name : '';
+        });
+
+        function showToast(msg) {
+            toastMsg.value = msg;
+            toastVisible.value = true;
+            setTimeout(() => { toastVisible.value = false; }, 2000);
+        }
+
+        async function fetchCategories() {
+            const resp = await fetch('/api/categories');
+            categories.value = await resp.json();
+            if (categories.value.length && !fromUnit.value) {
+                fromUnit.value = categories.value[0].units[0];
+                toUnit.value = categories.value[0].units[1] || categories.value[0].units[0];
+                doConvert();
+            }
+        }
+
+        async function doConvert() {
+            if (inputValue.value === '' || inputValue.value === null || !fromUnit.value) {
+                results.value = null;
+                targetResult.value = null;
+                return;
+            }
+            try {
+                const resp = await fetch('/api/convert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        category: selectedCategory.value,
+                        from_unit: fromUnit.value,
+                        value: inputValue.value,
+                        precision: precision.value
+                    })
+                });
+                const data = await resp.json();
+                results.value = data.results;
+                if (toUnit.value && data.results[toUnit.value] !== undefined) {
+                    targetResult.value = data.results[toUnit.value];
+                }
+            } catch (e) {
+                console.error('换算失败', e);
+            }
+        }
+
+        function selectCategory(key) {
+            selectedCategory.value = key;
+            const cat = categories.value.find(c => c.key === key);
+            if (cat) {
+                fromUnit.value = cat.units[0];
+                toUnit.value = cat.units[1] || cat.units[0];
+                doConvert();
+            }
+        }
+
+        function swapUnits() {
+            const tmp = fromUnit.value;
+            fromUnit.value = toUnit.value;
+            toUnit.value = tmp;
+            doConvert();
+        }
+
+        function copyResult(val, unit) {
+            const text = `${val} ${unit}`;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`已复制: ${text}`);
+            });
+        }
+
+        async function fetchHistory() {
+            const resp = await fetch('/api/history');
+            history.value = await resp.json();
+        }
+
+        async function clearHistory() {
+            await fetch('/api/history/clear', { method: 'POST' });
+            history.value = [];
+            showToast('历史已清除');
+        }
+
+        function getCategoryName(key) {
+            const cat = categories.value.find(c => c.key === key);
+            return cat ? cat.name : key;
+        }
+
+        function applyHistory(h) {
+            selectedCategory.value = h.category;
+            inputValue.value = h.value;
+            fromUnit.value = h.from_unit;
+            precision.value = h.precision || 6;
+            const cat = categories.value.find(c => c.key === h.category);
+            if (cat) {
+                toUnit.value = cat.units[1] || cat.units[0];
+            }
+            doConvert();
+            showToast('已加载历史记录');
+        }
+
+        async function fetchPresets() {
+            const resp = await fetch('/api/presets');
+            presets.value = await resp.json();
+        }
+
+        function applyPreset(p) {
+            selectedCategory.value = p.category;
+            inputValue.value = p.value;
+            fromUnit.value = p.from_unit;
+            toUnit.value = p.to_unit;
+            doConvert();
+            showToast(`已应用预设: ${p.name}`);
+        }
+
+        async function fetchExchangeRates() {
+            try {
+                const resp = await fetch('/api/exchange');
+                exchangeRates.value = await resp.json();
+            } catch (e) {
+                console.error('获取汇率失败', e);
+            }
+        }
+
+        async function convertCurrency() {
+            try {
+                const resp = await fetch('/api/exchange/convert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        from_currency: exchangeFrom.value,
+                        to_currency: exchangeTo.value,
+                        amount: exchangeAmount.value
+                    })
+                });
+                const data = await resp.json();
+                exchangeResult.value = data.result;
+            } catch (e) {
+                console.error('汇率换算失败', e);
+            }
+        }
+
+        onMounted(() => {
+            fetchCategories();
+            fetchHistory();
+            fetchPresets();
+            fetchExchangeRates();
+        });
+
+        return {
+            categories, selectedCategory, inputValue, fromUnit, toUnit, precision,
+            results, targetResult, history, presets, exchangeRates,
+            exchangeFrom, exchangeTo, exchangeAmount, exchangeResult,
+            toastVisible, toastMsg,
+            currentUnits, currentCategoryName,
+            selectCategory, swapUnits, doConvert, copyResult,
+            clearHistory, getCategoryName, applyHistory,
+            applyPreset, convertCurrency, showToast
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
