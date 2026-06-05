@@ -3,6 +3,7 @@ from flask_cors import CORS
 import json
 import os
 import requests
+import threading
 from datetime import datetime
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='')
@@ -86,15 +87,43 @@ PRESETS = [
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), 'history.json')
 EXCHANGE_CACHE_FILE = os.path.join(os.path.dirname(__file__), 'exchange_cache.json')
 
-def load_history():
+_history_lock = threading.Lock()
+_history_store = []
+
+def _load_history_from_file():
     if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data[:10]
+        except (json.JSONDecodeError, OSError, ValueError):
+            pass
     return []
 
-def save_history(history):
-    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-        json.dump(history[:10], f, ensure_ascii=False, indent=2)
+def _save_history_to_file(history_data):
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history_data[:10], f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass
+
+_history_store = _load_history_from_file()
+
+def get_history():
+    with _history_lock:
+        return list(_history_store)
+
+def add_history(entry):
+    with _history_lock:
+        _history_store.insert(0, entry)
+        del _history_store[10:]
+        _save_history_to_file(_history_store)
+
+def clear_all_history():
+    with _history_lock:
+        _history_store.clear()
+        _save_history_to_file([])
 
 def convert_temperature(value, from_unit, to_unit):
     if from_unit == to_unit:
@@ -166,29 +195,29 @@ def convert():
     for unit, val in results.items():
         formatted[unit] = round(val, precision)
 
-    history = load_history()
-    history.insert(0, {
-        "category": category,
-        "from_unit": from_unit,
-        "value": value,
-        "precision": precision,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "results": formatted
-    })
-    history = history[:10]
-    save_history(history)
+    try:
+        add_history({
+            "category": category,
+            "from_unit": from_unit,
+            "value": value,
+            "precision": precision,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "results": formatted
+        })
+    except Exception:
+        pass
 
     return jsonify({"results": formatted, "from_unit": from_unit, "value": value})
 
 
 @app.route('/api/history')
-def get_history():
-    return jsonify(load_history())
+def api_get_history():
+    return jsonify(get_history())
 
 
 @app.route('/api/history/clear', methods=['POST'])
-def clear_history():
-    save_history([])
+def api_clear_history():
+    clear_all_history()
     return jsonify({"message": "历史已清除"})
 
 
@@ -205,12 +234,15 @@ def get_presets():
 def get_exchange_rates():
     cache = None
     if os.path.exists(EXCHANGE_CACHE_FILE):
-        with open(EXCHANGE_CACHE_FILE, 'r', encoding='utf-8') as f:
-            cache = json.load(f)
-        cache_date = cache.get("date", "")
-        today = datetime.now().strftime("%Y-%m-%d")
-        if cache_date == today:
-            return jsonify(cache)
+        try:
+            with open(EXCHANGE_CACHE_FILE, 'r', encoding='utf-8') as f:
+                cache = json.load(f)
+            cache_date = cache.get("date", "")
+            today = datetime.now().strftime("%Y-%m-%d")
+            if cache_date == today:
+                return jsonify(cache)
+        except (json.JSONDecodeError, OSError, ValueError):
+            cache = None
 
     try:
         resp = requests.get("https://api.exchangerate-api.com/v4/latest/USD", timeout=10)

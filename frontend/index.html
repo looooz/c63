@@ -448,15 +448,22 @@
             top: 20px;
             right: 20px;
             padding: 12px 24px;
-            background: var(--success);
-            color: #064e3b;
             border-radius: 10px;
             font-weight: 600;
             font-size: 0.9rem;
             z-index: 1000;
             transform: translateX(120%);
             transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+        .toast.success {
+            background: var(--success);
+            color: #064e3b;
             box-shadow: 0 4px 15px rgba(52,211,153,0.3);
+        }
+        .toast.error {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 4px 15px rgba(239,68,68,0.3);
         }
         .toast.show { transform: translateX(0); }
         .loading-spinner {
@@ -665,7 +672,7 @@
         </div>
     </div>
 
-    <div class="toast" :class="{ show: toastVisible }">{{ toastMsg }}</div>
+    <div class="toast" :class="[toastType, { show: toastVisible }]">{{ toastMsg }}</div>
 </div>
 
 <script>
@@ -690,6 +697,7 @@ createApp({
         const exchangeResult = ref(null);
         const toastVisible = ref(false);
         const toastMsg = ref('');
+        const toastType = ref('success');
 
         const currentUnits = computed(() => {
             const cat = categories.value.find(c => c.key === selectedCategory.value);
@@ -701,8 +709,9 @@ createApp({
             return cat ? cat.name : '';
         });
 
-        function showToast(msg) {
+        function showToast(msg, type = 'success') {
             toastMsg.value = msg;
+            toastType.value = type;
             toastVisible.value = true;
             setTimeout(() => { toastVisible.value = false; }, 2000);
         }
@@ -734,13 +743,22 @@ createApp({
                         precision: precision.value
                     })
                 });
+                if (!resp.ok) {
+                    showToast('换算请求失败，请稍后重试', 'error');
+                    return;
+                }
                 const data = await resp.json();
+                if (data.error) {
+                    showToast(data.error, 'error');
+                    return;
+                }
                 results.value = data.results;
-                if (toUnit.value && data.results[toUnit.value] !== undefined) {
+                if (toUnit.value && data.results && data.results[toUnit.value] !== undefined) {
                     targetResult.value = data.results[toUnit.value];
                 }
             } catch (e) {
                 console.error('换算失败', e);
+                showToast('网络错误，请检查连接后重试', 'error');
             }
         }
 
@@ -774,9 +792,18 @@ createApp({
         }
 
         async function clearHistory() {
-            await fetch('/api/history/clear', { method: 'POST' });
-            history.value = [];
-            showToast('历史已清除');
+            try {
+                const resp = await fetch('/api/history/clear', { method: 'POST' });
+                if (!resp.ok) {
+                    showToast('清除历史失败，请稍后重试', 'error');
+                    return;
+                }
+                history.value = [];
+                showToast('历史已清除');
+            } catch (e) {
+                console.error('清除历史失败', e);
+                showToast('网络错误，请检查连接后重试', 'error');
+            }
         }
 
         function getCategoryName(key) {
@@ -849,7 +876,7 @@ createApp({
             categories, selectedCategory, inputValue, fromUnit, toUnit, precision,
             results, targetResult, history, presets, exchangeRates,
             exchangeFrom, exchangeTo, exchangeAmount, exchangeResult,
-            toastVisible, toastMsg,
+            toastVisible, toastMsg, toastType,
             currentUnits, currentCategoryName,
             selectCategory, swapUnits, doConvert, copyResult,
             clearHistory, getCategoryName, applyHistory,
